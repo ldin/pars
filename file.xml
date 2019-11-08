@@ -1,0 +1,87 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+<yml_catalog date="2019-08-16 08:40">
+    <shop>
+    <name></name>
+    <company></company>
+    <url></url>
+    <currencies>
+    </currencies>
+<categories>
+<category id='10604368'>Оргтехника</category>
+<category id='90725' parentId='10604368'>Калькуляторы</category>
+<category id='90727' parentId='10604368'>Брошюровщики</category>
+<category id='90726' parentId='10604368'>Ламинаторы</category>
+<category id='90728' parentId='10604368'>Машинки для уничтожения бумаг</category>
+<category id='91063' parentId='10604368'>Принтеры матричные</category>
+<category id='91068' parentId='10604368'>Режущие плоттеры</category>
+<category id='91108' parentId='10604368'>Оборудование для конференций</category>
+<category id='91112' parentId='10604368'>Сканеры</category>
+<category id='91465' parentId='10604368'>Факсы</category>
+<category id='91469' parentId='10604368'>Системные телефоны</category>
+<category id='91468' parentId='10604368'>Мини АТС</category>
+<category id='91484' parentId='10604368'>Оборудование для АТС</category>
+<category id='7718838' parentId='10604368'>Резаки</category>
+<category id='9283442' parentId='10604368'>3D-принтеры</category>
+<category id='14421049' parentId='10604368'>Аксессуары для оргтехники</category>
+<category id='308025' parentId='10604368'>Копиры и дупликаторы</category>
+<category id='14333193' parentId='10604368'>Комплектующие для плоттеров</category>
+<category id='16611586' parentId='10604368'>3D-ручки</category>
+<category id='15293531' parentId='10604368'>Расходные материалы для 3D печати</category>
+<category id='138608' parentId='10604368'>Принтеры и МФУ</category>
+</categories>
+<offers>
+<offer id="10994999">
+<vendor>TWINJET</vendor>
+<categoryId>138608</categoryId>
+<description>принтер, A0, печать  пьезоэлектрическая струйная цветная, 4-цветная, 1440x1400 dpi RS-232, USB</description>
+<name>Принтер TWINJET SJ-1605</name>
+<picture>https://avatars.mds.yandex.net/get-mpic/1925870/img_id3059997875706882071/orig</picture>
+<picture>https://avatars.mds.yandex.net/get-mpic/1925870/img_id3059997875706882071/orig</picture>
+<picture>https://avatars.mds.yandex.net/get-mpic/200316/img_id9077977227193429919/orig</picture>
+<picture>https://avatars.mds.yandex.net/get-mpic/364668/img_id6695429260311701189/orig</picture>
+<param name="Устройство">принтер</param>
+<param name="Цветность печати">цветная</param>
+<param name="Технология печати">пьезоэлектрическая струйная</param>
+<param name="Размещение">напольный</param>
+<param name="Максимальный формат">A0</param>
+<param name="Количество цветов">4</param>
+<param name="Минимальный объем капли">3.5 пл</param>
+<param name="Максимальное разрешение для ч/б печати">1440x1440 dpi</param>
+<param name="Максимальное разрешение для цветной печати">1440x1400 dpi</param>
+<param name="Печать на:">пленках, глянцевой бумаге, рулоне</param>
+<param name="Количество картриджей">4</param>
+<param name="Интерфейсы">RS-232, USB 2.0</param>
+<param name="Поддержка PostScript">нет</param>
+<param name="Поддержка ОС">Windows</param>
+<param name="Потребляемая мощность (при работе)">1200 Вт</param>
+<param name="Габариты (ШхВхГ)">2733x1352x780 мм</param>
+<param name="Вес">220 кг</param>
+<param name="Особенности">Экосольвентный плоттер; Максимальная ширина печати 1600 мм; максимальный диаметр рулона 210 мм; максимальный вес носителя 60 кг; Скорость печати от 5 до 18 кв.м./ч; Подогрев материала в зоне печати; Печатные материалы: самоклеющаяся пленка, сетка, текстиль, баннер, бумага, кожа и другие</param>
+</offer>
+<offer id="10400768">
+<vendor>TWINJET</vendor>
+<categoryId>138608</categoryId>
+<description>принтер, A0, печать  пьезоэлектрическая струйная цветная, 4-цветная, 1440x1400 dpi RS-232, USB</description>
+<name>Принтер TWINJET SJ-1608</name>
+<picture>https://avatars.mds.yandex.net/get-mpic/175985/img_id2339040461142086779/orig</picture>
+<picture>https://avatars.mds.yandex.net/get-mpic/175985/img_id2339040461142086779/orig</picture>
+<param name="Устройство">принтер</param>
+<param name="Цветность печати">цветная</param>
+<param name="Технология печати">пьезоэлектрическая струйная</param>
+<param name="Размещение">напольный</param>
+<param name="Максимальный формат">A0</param>
+<param name="Количество цветов">4</param>
+<param name="Минимальный объем капли">3.5 пл</param>
+<param name="Максимальное разрешение для цветной печати">1440x1400 dpi</param>
+<param name="Печать на:">пленках, глянцевой бумаге, рулоне</param>
+<param name="Интерфейсы">RS-232, USB 2.0</param>
+<param name="Поддержка PostScript">нет</param>
+<param name="Поддержка ОС">Windows</param>
+<param name="Потребляемая мощность (при работе)">1000 Вт</param>
+<param name="Габариты (ШхВхГ)">2410x1250x700 мм</param>
+<param name="Вес">160 кг</param>
+<param name="Особенности">Экосольвентный плоттер; Максимальная ширина печати 1600 мм; Скорость печати от 7.4 до 17.5 кв.м./ч; Подогрев материала в зоне печати; Печатные материалы: самоклеющаяся пленка, сетка, текстиль, баннер, бумага, кож и другие</param>
+</offer>
+</offers>
+</shop>
+</yml_catalog>
