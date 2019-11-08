@@ -8,7 +8,7 @@ if(!file_exists($BASE->fileNameXML) || filesize($BASE->fileNameXML) == 0){
 
 $BASE->API = '0882dd91347958773d48ed01bce01396a66b9ce6d8';
 $BASE->BASE_URL = 'http://market.apisystem.name/v2/';
-$BASE->fields_for_model = 'MODEL_CATEGORY,MODEL_FACTS,MODEL_LINK,MODEL_PHOTOS,MODEL_PRICE,MODEL_SPECIFICATION,MODEL_VENDOR,OFFER_ACTIVE_FILTERS';
+$BASE->fields_for_model = 'MODEL_CATEGORY,MODEL_FACTS,MODEL_LINK,MODEL_PHOTOS,MODEL_PRICE,MODEL_SPECIFICATION,MODEL_VENDOR,MODEL_ACTIVE_FILTERS';
 $BASE->count = 30;
 $BASE->page = 1;
 
@@ -21,11 +21,11 @@ sleep(2);
 $child = getCategoryChild($BASE );
 sleep(2);
 //получить модели
-// for ($i = 1; $i <= 50; ++$i) {
-//     $items = getItem($BASE, $i );
-//
-//     sleep(2);
-// }
+for ($i = 1; $i <= 5; ++$i) {
+    $items = getItem($BASE, $i );
+
+    sleep(2);
+}
 
 
 
@@ -39,9 +39,9 @@ function getItem($BASE, $page ){
 
     var_dump($URL_FOR_ITEMS);
 
-    //$json  = file_get_contents(URL_FOR_ITEMS);
+    $json  = file_get_contents($URL_FOR_ITEMS);
 
-    $json  = file_get_contents('./tmp/categories_10604359_search_p1.json'); // в примере все файлы в корне
+    //$json  = file_get_contents('./tmp/categories_10604359_search_p1.json'); // в примере все файлы в корне
 
     $json = trim($json);
 
@@ -49,8 +49,10 @@ function getItem($BASE, $page ){
 
     $items = $object["items"];
 
-    foreach ($items as  $value) {
-        foo_add_items_xml($BASE->fileNameXML, $value);
+    if(isset($items) || count($items)> 0){
+        foreach ($items as  $value) {
+            foo_add_items_xml($BASE->fileNameXML, $value);
+        }
     }
 
     return;
@@ -142,9 +144,11 @@ function foo_add_items_xml($fileNameXML, $model){
           $param = $offer->addChild('picture',  $value["url"]);
      }
 
-   foreach($model["specification"][0]["features"] as $value) {
-       $param = $offer->addChild('param',  $value["value"]);
-       //$param->addAttribute('name', $value["name"]);
+   foreach($model["activeFilters"] as $value) {
+       if( isset($value["value"]) && isset($value["value"][0]) ){
+        $param = $offer->addChild('param', $value["value"][0]["name"] );
+        $param->addAttribute('name', $value["name"]);
+       }
    }
    $done = $xml_doc->asXML($fileNameXML);
 }
