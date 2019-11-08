@@ -1,0 +1,7 @@
+params-model-v2 http://market.apisystem.name/v2/categories/91009/search?count=30&page=1&fields=MODEL_CATEGORY,MODEL_FACTS,MODEL_LINK,MODEL_PHOTOS,MODEL_PRICE,MODEL_SPECIFICATION,MODEL_VENDOR,MODEL_ACTIVE_FILTERS&result_type=MODELS&api_key=0882dd91347958773d48ed01bce01396a66b9ce6d8
+
+params-json-v1 http://market.apisystem.name/v1/model/14224708/details.json?api_key=0882dd91347958773d48ed01bce01396a66b9ce6d8
+
+categories-children http://market.apisystem.name/v2/categories/91009/children?count=30&page=1&api_key=0882dd91347958773d48ed01bce01396a66b9ce6d8
+
+categories http://market.apisystem.name/v2/categories/91009?count=30&page=1&api_key=0882dd91347958773d48ed01bce01396a66b9ce6d8

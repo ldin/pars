@@ -8,25 +8,27 @@ if(!file_exists($BASE->fileNameXML) || filesize($BASE->fileNameXML) == 0){
 
 $BASE->API = '0882dd91347958773d48ed01bce01396a66b9ce6d8';
 $BASE->BASE_URL = 'http://market.apisystem.name/v2/';
-$BASE->fields_for_model = 'MODEL_CATEGORY,MODEL_FACTS,MODEL_LINK,MODEL_PHOTOS,MODEL_PRICE,MODEL_SPECIFICATION,MODEL_VENDOR,MODEL_ACTIVE_FILTERS';
+$BASE->fields_for_model = 'MODEL_CATEGORY,MODEL_FACTS,MODEL_LINK,MODEL_PHOTOS,MODEL_PRICE,MODEL_SPECIFICATION,MODEL_VENDOR';
+//MODEL_ACTIVE_FILTERS
 $BASE->count = 30;
 $BASE->page = 1;
 
 $BASE->categories_id = '91009';
 
 //получить описание подкатегорий
-$category = getCategory($BASE);
-sleep(2);
-
-$child = getCategoryChild($BASE );
-sleep(2);
+// $category = getCategory($BASE);
+// sleep(2);
+//
+// $child = getCategoryChild($BASE );
+// sleep(2);
 //получить модели
-for ($i = 1; $i <= 5; ++$i) {
+for ($i = 1; $i <= 1; ++$i) {
     $items = getItem($BASE, $i );
 
     sleep(2);
 }
-
+// $prop = getItemParam($BASE, '14224708');
+// var_dump($prop);
 
 
 function getItem($BASE, $page ){
@@ -38,24 +40,44 @@ function getItem($BASE, $page ){
     $URL_FOR_ITEMS .= '&api_key='.$BASE->API;
 
     var_dump($URL_FOR_ITEMS);
+    //$json  = file_get_contents('./tmp/categories_10604359_search_p1.json');
 
-    $json  = file_get_contents($URL_FOR_ITEMS);
-
-    //$json  = file_get_contents('./tmp/categories_10604359_search_p1.json'); // в примере все файлы в корне
-
-    $json = trim($json);
-
-    $object = json_decode($json, true);
-
-    $items = $object["items"];
+    $json = getJson($URL_FOR_ITEMS);
+    $items = $json["items"];
 
     if(isset($items) || count($items)> 0){
         foreach ($items as  $value) {
-            foo_add_items_xml($BASE->fileNameXML, $value);
+            sleep(1);
+            $prop = getItemParam($BASE, $value["id"]);
+            foo_add_items_xml($BASE->fileNameXML, $value, $prop);
         }
     }
 
     return;
+}
+
+function getItemParam($BASE, $id_model ){
+    $BASE_URL = 'http://market.apisystem.name/v1/';
+    $URL = $BASE_URL . 'model/' . $id_model . '/details.json?';
+    $URL .= 'api_key='.$BASE->API;
+
+    $json = getJson($URL);
+    $items = $json["modelDetails"];
+
+    $properties = array();
+
+    if(isset($items) || count($items)> 0){
+        foreach ($items as  $detail) {
+            if(isset($detail) && isset($detail["params"]) && count($detail)> 0){
+                    foreach ($detail["params"] as  $param) {
+                        $properties[$param["name"]] = $param["value"];
+                    }
+            }
+        }
+    }
+    $properties = (object)$properties;
+
+    return $properties;
 }
 
 function getCategory($BASE ){
@@ -64,11 +86,8 @@ function getCategory($BASE ){
 
     var_dump($URL);
 
-    $json  = file_get_contents($URL);
-    $json = trim($json);
-    $object = json_decode($json, true);
-
-    $category = $object["category"];
+    $json = getJson($URL);
+    $category = $json["category"];
 
     $prop = new stdClass;
     $prop->id = $category["id"];
@@ -84,13 +103,7 @@ function getCategoryChild($BASE ){
 
     var_dump($URL);
 
-    $json  = file_get_contents($URL);
-
-    //$json  = file_get_contents('./tmp/categories_10604359_search_p1.json'); // в примере все файлы в корне
-
-    $json = trim($json);
-    $object = json_decode($json, true);
-
+    $json = getJson($URL);
     $items = $object["categories"];
 
     foreach ($items as  $value) {
@@ -127,7 +140,7 @@ function foo_add_category_xml($fileNameXML, $propName, $prop){
    $done = $xml_doc->asXML($fileNameXML);
 }
 
-function foo_add_items_xml($fileNameXML, $model){
+function foo_add_items_xml($fileNameXML, $model, $properties){
 
    $xml_doc = simplexml_load_file($fileNameXML);
    $categories = $xml_doc->shop->offers;
@@ -144,13 +157,39 @@ function foo_add_items_xml($fileNameXML, $model){
           $param = $offer->addChild('picture',  $value["url"]);
      }
 
-   foreach($model["activeFilters"] as $value) {
-       if( isset($value["value"]) && isset($value["value"][0]) ){
-        $param = $offer->addChild('param', $value["value"][0]["name"] );
-        $param->addAttribute('name', $value["name"]);
-       }
+   foreach($properties as $key=>$value) {
+        $param = $offer->addChild('param',  $value);
+        $param->addAttribute('name', $key);
    }
+
+// краткие характеристики
+//    foreach($model["activeFilters"] as $value) {
+//        if( isset($value["value"]) && isset($value["value"][0]) ){
+//         $param = $offer->addChild('param', $value["value"][0]["name"] );
+//         $param->addAttribute('name', $value["name"]);
+//        }
+//    }
    $done = $xml_doc->asXML($fileNameXML);
+}
+
+function getJson($URL){
+    $json  = file_get_contents($URL);
+
+    $json = trim($json);
+    $object = json_decode($json, true);
+
+    //var_dump(count($object));
+
+    if(count($object) > 0){
+        return $object;
+    }
+
+    sleep(10);
+    $json  = file_get_contents($URL);
+    $json = trim($json);
+    $object = json_decode($json, true);
+    return $object;
+
 }
 
 switch (json_last_error()) {
