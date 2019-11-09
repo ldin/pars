@@ -16,24 +16,30 @@ $BASE->page = 1;
 $BASE->categories_id = '91009';
 
 //получить описание подкатегорий
-// $category = getCategory($BASE);
-// sleep(2);
-//
-// $child = getCategoryChild($BASE );
-// sleep(2);
+$category = getCategory($BASE);
+sleep(5);
+
+$child = getCategoryChild($BASE );
+sleep(5);
 //получить модели
-for ($i = 1; $i <= 1; ++$i) {
-    $items = getItem($BASE, $i );
+for($k = 0; $k <= 200000; $k+=5000){
 
-    sleep(2);
+    for ($i = 1; $i <= 50; ++$i) {
+        $items = getItem($BASE, $i, $k.'~'.($k+5000) );
+
+        sleep(2);
+    }
+
 }
-// $prop = getItemParam($BASE, '14224708');
-// var_dump($prop);
 
 
-function getItem($BASE, $page ){
+
+function getItem($BASE, $page, $price){
     $URL_FOR_ITEMS = $BASE->BASE_URL . 'categories/' . $BASE->categories_id . '/search?';
-    $URL_FOR_ITEMS .= 'count='.$BASE->count;
+    if(isset($price)){
+            $URL_FOR_ITEMS .= '-1='.$price;
+        }
+    $URL_FOR_ITEMS .= '&count='.$BASE->count;
     $URL_FOR_ITEMS .= '&page='.$page;
     $URL_FOR_ITEMS .= '&fields='.$BASE->fields_for_model;
     $URL_FOR_ITEMS .= '&result_type=MODELS';
@@ -45,10 +51,11 @@ function getItem($BASE, $page ){
     $json = getJson($URL_FOR_ITEMS);
     $items = $json["items"];
 
-    if(isset($items) || count($items)> 0){
+    if(isset($items) || count($items) > 1){
         foreach ($items as  $value) {
             sleep(1);
             $prop = getItemParam($BASE, $value["id"]);
+            //$prop = new stdClass;
             foo_add_items_xml($BASE->fileNameXML, $value, $prop);
         }
     }
@@ -104,7 +111,7 @@ function getCategoryChild($BASE ){
     var_dump($URL);
 
     $json = getJson($URL);
-    $items = $object["categories"];
+    $items = $json["categories"];
 
     foreach ($items as  $value) {
         $prop = new stdClass;
