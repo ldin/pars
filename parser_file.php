@@ -1,66 +1,105 @@
 <?php
 $BASE = new stdClass();
+
+// имя файла куда будет проходить выгрузка. Если файла нет - он создаться в текущей папке
 $BASE->fileNameXML = 'test.xml';
+
+// id категории
+$BASE->categories_id = '91009';
+
+// Минимальная\максимальная цена и шаг выборки по цене.
+// Для цен меньше мин и больше макс отдельные запросы.
+$BASE->min_price = 0;
+$BASE->max_price = 200000;
+$BASE->step_price = 2000;
+
+
+// не менять
+$BASE->API = '0882dd91347958773d48ed01bce01396a66b9ce6d8';
+$BASE->BASE_URL = 'http://market.apisystem.name/v2/';
+$BASE->fields_for_model = 'MODEL_CATEGORY,MODEL_FACTS,MODEL_LINK,MODEL_PHOTOS,MODEL_PRICE,MODEL_SPECIFICATION,MODEL_VENDOR';
+
+//MODEL_ACTIVE_FILTERS
+$BASE->count = 30;
+$BASE->page = 1;
 
 if(!file_exists($BASE->fileNameXML) || filesize($BASE->fileNameXML) == 0){
     foo_create_xml($BASE->fileNameXML);
 }
 
-$BASE->API = '0882dd91347958773d48ed01bce01396a66b9ce6d8';
-$BASE->BASE_URL = 'http://market.apisystem.name/v2/';
-$BASE->fields_for_model = 'MODEL_CATEGORY,MODEL_FACTS,MODEL_LINK,MODEL_PHOTOS,MODEL_PRICE,MODEL_SPECIFICATION,MODEL_VENDOR';
-//MODEL_ACTIVE_FILTERS
-$BASE->count = 30;
-$BASE->page = 1;
-
-$BASE->categories_id = '91009';
 
 //получить описание подкатегорий
 $category = getCategory($BASE);
-sleep(5);
+sleep(3);
 
 $child = getCategoryChild($BASE );
-sleep(5);
-//получить модели
-for($k = 0; $k <= 200000; $k+=5000){
+sleep(3);
 
-    for ($i = 1; $i <= 50; ++$i) {
-        $items = getItem($BASE, $i, $k.'~'.($k+5000) );
+// получить модели
+// цена меньше минимальной
+$items = getModelsCategory($BASE, '~'.($BASE->min_price) );
+// модели с ценой по шагам
+sleep(1);
 
-        sleep(2);
-    }
-
+for($k = $BASE->min_price; $k <= $BASE->max_price; $k += $BASE->step_price){
+    getModelsCategory($BASE, ($k.'~'.($k+$BASE->step_price)) );
 }
 
+// цена больше макимальной
+$items = getModelsCategory($BASE, '~'.($BASE->min_price) );
 
+var_dump('The good end');
+
+
+function getModelsCategory($BASE, $price){
+    $count = getPagesCount($BASE, 1, $price );
+
+    $pagesCount = (0 < $count && $count <  51) ? $count : 50;
+
+    for ($i = 2; $i <= $pagesCount; ++$i) {
+        getItem($BASE, $i, $price );
+        sleep(1);
+    }
+}
+
+function getPagesCount($BASE, $page, $price){
+    $json = getItem($BASE, $page, $price);
+    $page = $json["context"]["page"]["total"];
+
+    return $page;
+}
 
 function getItem($BASE, $page, $price){
     $URL_FOR_ITEMS = $BASE->BASE_URL . 'categories/' . $BASE->categories_id . '/search?';
     if(isset($price)){
             $URL_FOR_ITEMS .= '-1='.$price;
-        }
+    }
     $URL_FOR_ITEMS .= '&count='.$BASE->count;
     $URL_FOR_ITEMS .= '&page='.$page;
     $URL_FOR_ITEMS .= '&fields='.$BASE->fields_for_model;
     $URL_FOR_ITEMS .= '&result_type=MODELS';
     $URL_FOR_ITEMS .= '&api_key='.$BASE->API;
 
-    var_dump($URL_FOR_ITEMS);
-    //$json  = file_get_contents('./tmp/categories_10604359_search_p1.json');
-
     $json = getJson($URL_FOR_ITEMS);
+
+    if(!isset($json) || !isset($json["items"])){
+         return;
+    }
+
+    writeItem($BASE, $json);
+    return $json;
+}
+
+function writeItem($BASE, $json){
     $items = $json["items"];
 
     if(isset($items) || count($items) > 1){
         foreach ($items as  $value) {
             sleep(1);
             $prop = getItemParam($BASE, $value["id"]);
-            //$prop = new stdClass;
             foo_add_items_xml($BASE->fileNameXML, $value, $prop);
         }
     }
-
-    return;
 }
 
 function getItemParam($BASE, $id_model ){
@@ -69,6 +108,11 @@ function getItemParam($BASE, $id_model ){
     $URL .= 'api_key='.$BASE->API;
 
     $json = getJson($URL);
+
+    if(!isset($json) || !isset($json["modelDetails"])){
+        return;
+    }
+
     $items = $json["modelDetails"];
 
     $properties = array();
@@ -91,9 +135,12 @@ function getCategory($BASE ){
     $URL = $BASE->BASE_URL . 'categories/' . $BASE->categories_id . '?';
     $URL .= '&api_key='.$BASE->API;
 
-    var_dump($URL);
-
     $json = getJson($URL);
+
+    if(!isset($json) || !isset($json["category"])){
+        return;
+    }
+
     $category = $json["category"];
 
     $prop = new stdClass;
@@ -108,9 +155,12 @@ function getCategoryChild($BASE ){
     $URL .= 'count='.$BASE->count;
     $URL .= '&api_key='.$BASE->API;
 
-    var_dump($URL);
-
     $json = getJson($URL);
+
+    if(!isset($json) || !isset($json["categories"])){
+        return;
+    }
+
     $items = $json["categories"];
 
     foreach ($items as  $value) {
@@ -162,14 +212,17 @@ function foo_add_items_xml($fileNameXML, $model, $properties){
 
    foreach($model["photos"] as $value) {
           $param = $offer->addChild('picture',  $value["url"]);
-     }
-
-   foreach($properties as $key=>$value) {
-        $param = $offer->addChild('param',  $value);
-        $param->addAttribute('name', $key);
    }
 
-// краткие характеристики
+   if(isset($properties) && count($properties) > 0 ){
+       foreach($properties as $key=>$value) {
+           $param = $offer->addChild('param',  $value);
+           $param->addAttribute('name', $key);
+       }
+   }
+
+
+// краткие характеристики из v2
 //    foreach($model["activeFilters"] as $value) {
 //        if( isset($value["value"]) && isset($value["value"][0]) ){
 //         $param = $offer->addChild('param', $value["value"][0]["name"] );
@@ -180,22 +233,33 @@ function foo_add_items_xml($fileNameXML, $model, $properties){
 }
 
 function getJson($URL){
-    $json  = file_get_contents($URL);
+
+    try {
+        $json = file_get_contents($URL);
+
+        if ($json === false) {
+            var_dump('$json === false');
+
+            sleep(20);
+            $json  = file_get_contents($URL);
+        }
+    } catch (Exception $e) {
+        var_dump('Exception http', $e);
+        return false;
+    }
+
+    var_dump($URL);
+
+    //$json  = file_get_contents('./tmp/params-models-v2.json');
 
     $json = trim($json);
     $object = json_decode($json, true);
-
-    //var_dump(count($object));
 
     if(count($object) > 0){
         return $object;
     }
 
-    sleep(10);
-    $json  = file_get_contents($URL);
-    $json = trim($json);
-    $object = json_decode($json, true);
-    return $object;
+    return false;
 
 }
 
