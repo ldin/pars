@@ -8,7 +8,7 @@ $BASE->categories_id = '91491';
 // Для цен меньше мин и больше макс отдельные запросы.
 $BASE->min_price = 0;
 $BASE->max_price = 200000;
-$BASE->step_price = 500;
+$BASE->step_price = 10000;
 
 
 // не менять
@@ -17,18 +17,26 @@ $BASE->BASE_URL = 'http://market.apisystem.name/v2/';
 $BASE->fields_for_model = 'MODEL_CATEGORY,MODEL_PHOTOS,MODEL_VENDOR';
 
 //MODEL_ACTIVE_FILTERS
-$BASE->count = 30;
+$BASE->count = 30; // кратно 10 должно быть
 $BASE->page = 1;
 
 $BASE->allCountFromCategory = 0;
 $BASE->currentCountFromCategory = 0;
-$BASE->fileNameXML = 'test.xml';
+$BASE->fileNameXML = 'test2.xml';
 $BASE->current_categories_id = '';
 
 init();
 
 function init(){
     global $BASE;
+
+//     $u = "http://market.apisystem.name/v2/categories/91491/search?&count=30&page=1&-11=15292504&fields=MODEL_CATEGORY,MODEL_PHOTOS,MODEL_VENDOR&result_type=MODELS&api_key=0882dd91347958773d48ed01bce01396a66b9ce6d8";
+//     getJson($u, $limit = 0);
+//     $BASE->current_categories_id = $BASE->categories_id;
+//     foo_create_xml($BASE->fileNameXML);
+//     getModelsCategory("15292504", false);
+//
+//     return;
 
 
 
@@ -38,20 +46,30 @@ function init(){
     var_dump(count($manufacturers));
     if(!count($manufacturers)){
         var_dump('ERROR. No manufacturers');
+        return;
     }
+
+    getCategoryAndInitFile();
+
     foreach($manufacturers as  $factory){
-        //getItem($page, $factory, $price)
 
-            $itemJson = getItem( 1, $factory["id"], false );
-            //writeItem($itemJson);
-            $count = getPagesCount($itemJson);
+        $itemJson = getItem( 1, $factory["id"], false );
 
-            var_dump($count);
+        $count = getPagesCount($itemJson);
+        if($count > 0 && $count < 51){
+            getModelsCategory($factory["id"], false);
+        } else if($count > 51){
+            getModelsCategoryFromPriceAndFactory($factory["id"]);
+        }
 
-//         $items = getModelsCategory($factory["id"] )
+        var_dump('Find pages factory:' . $count);
     }
 
-    return getAllModelsCategoryFromPrice();
+    var_dump( $BASE->currentCountFromCategory.' out of '.$BASE->allCountFromCategory.' models received.. loading...');
+    var_dump('The END;');
+
+
+    //return getModelsCategoryFromPrice();
 
 //     $BASE->current_categories_id = $BASE->categories_id;
 //     $count = getItemCount();
@@ -77,16 +95,13 @@ function init(){
 //     }
 }
 
-
-
-function getAllModelsCategoryFromPrice(){
+function getCategoryAndInitFile(){
     global $BASE;
     //получить описание подкатегорий
-
     sleep(3);
 
     $category = getCategory();
-    sleep(3);
+    sleep(3); //часто зависает после этих запросов
 
     $childCategory = getCategoryChild();
     getCategoryChildWrite($childCategory);
@@ -95,24 +110,26 @@ function getAllModelsCategoryFromPrice(){
     $count = getItemCount();
     var_dump('All '.$BASE->allCountFromCategory.' models');
     sleep(3);
+}
 
+function getModelsCategoryFromPriceAndFactory($factory){
+    global $BASE;
 
     // получить модели
     // цена меньше минимальной
-    $items = getModelsCategory('~'.($BASE->min_price) );
+    $items = getModelsCategory($factory, '~'.($BASE->min_price) );
     // модели с ценой по шагам
     sleep(1);
 
     for($k = $BASE->min_price; $k <= $BASE->max_price; $k += $BASE->step_price){
-        getModelsCategory(($k.'~'.($k+$BASE->step_price)) );
+        getModelsCategory($factory, ($k.'~'.($k+$BASE->step_price)) );
         var_dump($BASE->currentCountFromCategory.' out of '.$BASE->allCountFromCategory.' models received... loading...');
     }
 
     // цена больше макимальной
-    $items = getModelsCategory('~'.($BASE->min_price) );
+    $items = getModelsCategory($factory, '~'.($BASE->min_price) );
 
-    var_dump( $BASE->currentCountFromCategory.' out of '.$BASE->allCountFromCategory.' models received');
-    var_dump('The good end');
+    var_dump( $BASE->currentCountFromCategory.' out of '.$BASE->allCountFromCategory.' models received.. loading...');
 
 }
 
@@ -145,14 +162,25 @@ function getManufacturers(){
 
 function getModelsCategory($factory, $price){
     global $BASE;
-    $itemJson = getItem( $i, $factory, $price );
+    $itemJson = getItem( 1, $factory, $price );
     writeItem($itemJson);
     $count = getPagesCount($itemJson);
     $pagesCount = (0 < $count && $count <  51) ? $count : 50;
 
+    if($itemJson !== false){
+        writeItem($itemJson);
+    } else {
+        getItemPartCount10Write(1, $factory, $price);
+    }
+
+
     for ($i = 2; $i <= $pagesCount; ++$i) {
         $itemJson = getItem( $i, $factory, $price );
-        writeItem($itemJson);
+        if($itemJson !== false){
+            writeItem($itemJson);
+        } else {
+            getItemPartCount10Write($i, $factory, $price);
+        }
         var_dump($BASE->currentCountFromCategory.' out of '.$BASE->allCountFromCategory.' models received... loading...');
         sleep(1);
     }
@@ -163,11 +191,15 @@ function getPagesCount($json){
     return $page;
 }
 
-function getItem($page, $factory, $price){
+function getItem($page, $factory, $price, $count=false, $limit=false){
     global $BASE;
+    if(!$count){
+        $count = $BASE->count;
+    }
+
     $URL_FOR_ITEMS = $BASE->BASE_URL . 'categories/' . $BASE->current_categories_id . '/search?';
-    $URL_FOR_ITEMS .= '&count='.$BASE->count;
-        $URL_FOR_ITEMS .= '&page='.$page;
+    $URL_FOR_ITEMS .= 'count='.$count;
+    $URL_FOR_ITEMS .= '&page='.$page;
     if($price){
             $URL_FOR_ITEMS .= '&-1='.$price;
     }
@@ -181,12 +213,32 @@ function getItem($page, $factory, $price){
     $json = getJson($URL_FOR_ITEMS);
 
     if(!isset($json) || !isset($json["items"])){
-        var_dump('No get models. Reload.');
+        if($limit){
+                return false;
+        }
+        var_dump('No get models. Reload..');
         sleep(2);
-         return getItem($page, $price);
+
+        return getItem($page, $factory, $price, false, true);
     }
 
     return $json;
+}
+
+function getItemPartCount10Write($page, $factory, $price){
+    global $BASE;
+
+    $pageNew = ((($page-1) * $BASE->count)/10);
+    $pagesCount = ($BASE->count)/10;
+
+    for($k = 1; $k <= $pagesCount; $k += 1){
+        if(($pageNew + $k) > 50){
+            return;
+        }
+        $item = getItem(($pageNew + $k), $factory, $price, 10);
+        writeItem($item);
+        sleep(1);
+    }
 }
 
 function getItemCount(){
@@ -215,9 +267,9 @@ function writeItem($json){
 
     if(isset($items) && count($items) > 1){
         foreach ($items as  $value) {
-//             sleep(1);
-//             $prop = getItemParam($value["id"]);
-            $prop = new stdClass();
+            sleep(1);
+            $prop = getItemParam($value["id"]);
+//             $prop = new stdClass();
             if(foo_add_items_xml($BASE->fileNameXML, $value, $prop)){
                  $BASE->currentCountFromCategory += 1;
             };
@@ -312,6 +364,7 @@ function getCategoryChildWrite($json){
 }
 
 function foo_create_xml($fileNameXML){
+
     $newsXML = new SimpleXMLElement('<?xml version="1.0" encoding="utf-8"?><yml_catalog date="'.date("m.d.y").'"></yml_catalog>');
 
     $shop = $newsXML->addChild('shop');
@@ -319,7 +372,7 @@ function foo_create_xml($fileNameXML){
     $newsIntro = $shop->addChild('categories');
     $newsIntro = $shop->addChild('offers');
 
-    $newsXML->asXML($BASE->fileNameXML);
+    $newsXML->asXML($fileNameXML);
 }
 
 function foo_add_category_xml($fileNameXML, $propName, $prop){
@@ -369,7 +422,7 @@ function foo_add_items_xml($fileNameXML, $model, $properties){
    return true;
 }
 
-function getJson($URL){
+function getJson($URL, $limit = 0){
 
     try {
         $json = file_get_contents($URL);
@@ -379,7 +432,10 @@ function getJson($URL){
              var_dump('Server error. Load 30sec and return');
 
             sleep(30);
-            return getJson($URL);
+            if($limit > 20){
+                return false;
+            }
+            return getJson($URL, ++$limit);
         }
     } catch (Exception $e) {
         var_dump('Server error. Load 30sec and return');
