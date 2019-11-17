@@ -2,7 +2,7 @@
 $BASE = new stdClass();
 
 // id категории
-$BASE->categories_id = '91491';
+$BASE->categories_id = '12382295';
 
 // Минимальная\максимальная цена и шаг выборки по цене.
 // Для цен меньше мин и больше макс отдельные запросы.
@@ -30,18 +30,21 @@ init();
 function init(){
     global $BASE;
 
+    // debugger;
 //     $u = "http://market.apisystem.name/v2/categories/91491/search?&count=30&page=1&-11=15292504&fields=MODEL_CATEGORY,MODEL_PHOTOS,MODEL_VENDOR&result_type=MODELS&api_key=0882dd91347958773d48ed01bce01396a66b9ce6d8";
 //     getJson($u, $limit = 0);
 //     $BASE->current_categories_id = $BASE->categories_id;
 //     foo_create_xml($BASE->fileNameXML);
-//     getModelsCategory("15292504", false);
-//
+//     //getModelsCategory("15292504", false);
+//     $i = getItem(1, "15292504", false);
+//     writeItem($i);
+//     var_dump( $BASE->currentCountFromCategory.' out of '.$BASE->allCountFromCategory.' models received.. loading...');
 //     return;
-
 
 
     $BASE->current_categories_id = $BASE->categories_id;
 
+    // получить всех производителей в категории
     $manufacturers = getManufacturers();
     var_dump(count($manufacturers));
     if(!count($manufacturers)){
@@ -49,6 +52,7 @@ function init(){
         return;
     }
 
+    //  создать  xml
     getCategoryAndInitFile();
 
     foreach($manufacturers as  $factory){
@@ -56,43 +60,18 @@ function init(){
         $itemJson = getItem( 1, $factory["id"], false );
 
         $count = getPagesCount($itemJson);
+        var_dump('Find pages models from factory:' . $count);
+
         if($count > 0 && $count < 51){
             getModelsCategory($factory["id"], false);
         } else if($count > 51){
             getModelsCategoryFromPriceAndFactory($factory["id"]);
         }
 
-        var_dump('Find pages factory:' . $count);
     }
 
-    var_dump( $BASE->currentCountFromCategory.' out of '.$BASE->allCountFromCategory.' models received.. loading...');
+    var_dump( $BASE->currentCountFromCategory.' out of '.$BASE->allCountFromCategory.' models received.');
     var_dump('The END;');
-
-
-    //return getModelsCategoryFromPrice();
-
-//     $BASE->current_categories_id = $BASE->categories_id;
-//     $count = getItemCount();
-//     var_dump('All in id=' . $BASE->current_categories_id. ' have ' . $BASE->allCountFromCategory.' models');
-//
-//     if($count < 20000){
-//         return getAllModelsCategoryFromPrice();
-//     }
-//
-//     $childrensJson = getCategoryChild();
-//     $childrens = $childrensJson["categories"];
-//     if($childrens && count($childrens)> 0){
-//
-//         foreach ($childrens as  $child) {
-//                 $BASE->current_categories_id = $child["id"];
-//                 getAllModelsCategoryFromPrice();
-//         }
-//
-//         return;
-//     }
-//     else{
-//         return getAllModelsCategoryFromPrice();
-//     }
 }
 
 function getCategoryAndInitFile(){
@@ -100,14 +79,14 @@ function getCategoryAndInitFile(){
     //получить описание подкатегорий
     sleep(3);
 
-    $category = getCategory();
+    getCategory();
     sleep(3); //часто зависает после этих запросов
 
     $childCategory = getCategoryChild();
     getCategoryChildWrite($childCategory);
     sleep(3);
 
-    $count = getItemCount();
+    getItemCount();
     var_dump('All '.$BASE->allCountFromCategory.' models');
     sleep(3);
 }
@@ -117,7 +96,7 @@ function getModelsCategoryFromPriceAndFactory($factory){
 
     // получить модели
     // цена меньше минимальной
-    $items = getModelsCategory($factory, '~'.($BASE->min_price) );
+    getModelsCategory($factory, '~'.($BASE->min_price) );
     // модели с ценой по шагам
     sleep(1);
 
@@ -127,7 +106,7 @@ function getModelsCategoryFromPriceAndFactory($factory){
     }
 
     // цена больше макимальной
-    $items = getModelsCategory($factory, '~'.($BASE->min_price) );
+    getModelsCategory($factory, '~'.($BASE->min_price) );
 
     var_dump( $BASE->currentCountFromCategory.' out of '.$BASE->allCountFromCategory.' models received.. loading...');
 
@@ -148,7 +127,7 @@ function getManufacturers(){
     }
 
     $filters = $json["filters"];
-    $manufacturers;
+    $manufacturers = array();
 
     foreach($filters as  $filter){
         if($filter["id"] === '-11') {
@@ -163,7 +142,6 @@ function getManufacturers(){
 function getModelsCategory($factory, $price){
     global $BASE;
     $itemJson = getItem( 1, $factory, $price );
-    writeItem($itemJson);
     $count = getPagesCount($itemJson);
     $pagesCount = (0 < $count && $count <  51) ? $count : 50;
 
@@ -172,7 +150,6 @@ function getModelsCategory($factory, $price){
     } else {
         getItemPartCount10Write(1, $factory, $price);
     }
-
 
     for ($i = 2; $i <= $pagesCount; ++$i) {
         $itemJson = getItem( $i, $factory, $price );
@@ -267,14 +244,33 @@ function writeItem($json){
 
     if(isset($items) && count($items) > 1){
         foreach ($items as  $value) {
-            sleep(1);
-            $prop = getItemParam($value["id"]);
-//             $prop = new stdClass();
-            if(foo_add_items_xml($BASE->fileNameXML, $value, $prop)){
-                 $BASE->currentCountFromCategory += 1;
-            };
+
+            if(!findIdInDocument($value["id"])){
+                         sleep(1);
+                         $prop = getItemParam($value["id"]);
+                        //$prop = new stdClass();
+                        if(foo_add_items_xml($BASE->fileNameXML, $value, $prop)){
+                             $BASE->currentCountFromCategory += 1;
+                        };
+            } else {
+                var_dump('findIdInDocument', $value["id"]);
+                sleep(20);
+            }
+
         }
     }
+}
+
+function findIdInDocument($id){
+    global $BASE;
+    $xml = simplexml_load_file($BASE->fileNameXML);
+    $elements = $xml->xpath("//offer[@id='".$id."']");
+    if(count($elements)){
+        var_dump('find duplicate: ', $id);
+        return true;
+    }
+
+    return false;
 }
 
 function getItemParam($id_model){
@@ -429,9 +425,9 @@ function getJson($URL, $limit = 0){
 
         if ($json === false) {
             //var_dump('$json === false');
-             var_dump('Server error. Load 30sec and return');
+             var_dump('Server error. Load 20sec and return');
 
-            sleep(30);
+            sleep(20);
             if($limit > 20){
                 return false;
             }
@@ -445,7 +441,7 @@ function getJson($URL, $limit = 0){
     }
 
     var_dump($URL);
-    //$json  = file_get_contents('./tmp/params-models-v2.json');
+    // $json  = file_get_contents('./tmp/params-models-v2_2.json');
 
     $json = trim($json);
     $object = json_decode($json, true);
