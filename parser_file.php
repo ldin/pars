@@ -10,6 +10,10 @@ $BASE->min_price = 0;
 $BASE->max_price = 100000;
 $BASE->step_price = 10000;
 
+// Включить если надо докачать элементы,
+// Загрузка начинается с последнего закаченного производителя(вначале возможны дубли)
+$BASE->latest_upload = true;
+$BASE->latest_upload_fileName = 'Konditsioneri_90578.xml';
 
 // не менять
 $BASE->API = '0882dd91347958773d48ed01bce01396a66b9ce6d8';
@@ -25,7 +29,12 @@ $BASE->currentCountFromCategory = 0;
 $BASE->fileNameXML = 'test2.xml';
 $BASE->current_categories_id = '';
 
-init();
+if($BASE->latest_upload){
+    initLatest();
+} else{
+    init();
+}
+
 //initDebug();
 
 function init(){
@@ -35,34 +44,62 @@ function init(){
 
     // получить всех производителей в категории
     $manufacturers = getManufacturers();
-    var_dump(count($manufacturers));
     if(!count($manufacturers)){
         var_dump('ERROR. No manufacturers');
         return;
     }
+    var_dump('Find manufacturers:' . count($manufacturers));
 
     //  создать  xml
     getCategoryAndInitFile();
 
     foreach($manufacturers as  $factory){
-
-        $itemJson = getItem( 1, $factory["id"], false );
-
-        $count = getPagesCount($itemJson);
-        var_dump('Find pages models from factory:' . $count);
-
-        if($count > 0 && $count < 51){
-            getModelsCategory($factory["id"], false);
-        } else if($count > 51){
-            getModelsCategoryFromPriceAndFactory($factory["id"]);
-        }
+        loadFromFactory($factory);
     }
 
     var_dump( $BASE->currentCountFromCategory.' out of '.$BASE->allCountFromCategory.' models received.');
     var_dump('The END;');
 }
 
-function initDebug(){
+function initLatest(){
+    global $BASE;
+
+    $BASE->current_categories_id = $BASE->categories_id;
+    $BASE->fileNameXML = $BASE->latest_upload_fileName;
+
+    // получить всех производителей в категории
+    $manufacturers = getManufacturers();
+
+    if(!count($manufacturers)){
+        var_dump('ERROR. No manufacturers');
+        return;
+    }
+    var_dump('Find manufacturers:' . count($manufacturers));
+
+    $latestVendorName = getLastVendorNameFromXml();
+    $latestVendorId = null;
+
+
+    foreach($manufacturers as  $factory){
+
+        if(!$latestVendorId && $factory["name"] === $latestVendorName){
+            $latestVendorId = $factory["id"];
+            var_dump('First manufacturer: ' . $factory["name"]);
+        }
+
+        if(!$latestVendorId){
+            continue;
+        }
+
+        loadFromFactory($factory);
+
+    }
+
+    var_dump( $BASE->currentCountFromCategory.' out of '.$BASE->allCountFromCategory.' models received.');
+    var_dump('The END;');
+}
+
+/*function initDebug(){
     global $BASE;
 
     // debugger;
@@ -112,6 +149,25 @@ function initDebug(){
 
     var_dump( $BASE->currentCountFromCategory.' out of '.$BASE->allCountFromCategory.' models received.');
     var_dump('The END;');
+}*/
+
+function loadFromFactory($factory){
+    $itemJson = getItem( 1, $factory["id"], false );
+
+    $count = getPagesCount($itemJson);
+    var_dump('Find pages models from factory:' . $count);
+
+    if($count > 0 && $count < 51){
+        getModelsCategory($factory["id"], false);
+    } else if($count > 51){
+        getModelsCategoryFromPriceAndFactory($factory["id"]);
+    }
+}
+
+function getLastVendorNameFromXml(){
+    global $BASE;
+    $xml = simplexml_load_file($BASE->fileNameXML);
+    return (string) $xml->xpath("//offer[last()]")[0]->vendor;
 }
 
 function getCategoryAndInitFile(){
@@ -295,7 +351,7 @@ function findIdInDocument($id){
     $xml = simplexml_load_file($BASE->fileNameXML);
     $elements = $xml->xpath("//offer[@id='".$id."']");
     if(count($elements)){
-        var_dump('find duplicate: ', $id);
+        var_dump('find duplicate: '. $id);
         return true;
     }
 
@@ -446,6 +502,7 @@ function foo_add_items_xml($fileNameXML, $model, $properties){
 }
 
 function getJson($URL, $limit = 0){
+    var_dump($URL);
     sleep(1);
     try {
         $json = file_get_contents($URL);
@@ -467,7 +524,6 @@ function getJson($URL, $limit = 0){
         return getJson($URL);
     }
 
-    var_dump($URL);
     // $json  = file_get_contents('./tmp/params-models-v2_2.json');
 
     $json = trim($json);
