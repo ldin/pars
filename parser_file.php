@@ -13,7 +13,7 @@ $BASE->step_price = 10000;
 // Включить если надо докачать элементы,
 // Загрузка начинается с последнего закаченного производителя(вначале возможны дубли)
 $BASE->latest_upload = true;
-$BASE->latest_upload_fileName = 'Konditsioneri_90578.xml';
+$BASE->latest_upload_fileName = 'Televizori_90639.xml';
 
 // не менять
 $BASE->API = '0882dd91347958773d48ed01bce01396a66b9ce6d8';
@@ -45,10 +45,10 @@ function init(){
     // получить всех производителей в категории
     $manufacturers = getManufacturers();
     if(!count($manufacturers)){
-        var_dump('ERROR. No manufacturers');
+        echo "ERROR. No manufacturers \n\r";
         return;
     }
-    var_dump('Find manufacturers:' . count($manufacturers));
+    echo 'Find manufacturers:' , count($manufacturers), " \n\r";
 
     //  создать  xml
     getCategoryAndInitFile();
@@ -57,8 +57,8 @@ function init(){
         loadFromFactory($factory);
     }
 
-    var_dump( $BASE->currentCountFromCategory.' out of '.$BASE->allCountFromCategory.' models received.');
-    var_dump('The END;');
+    echo  $BASE->currentCountFromCategory, ' out of ', $BASE->allCountFromCategory, " models received. \n\r";
+    echo "The END;  \n\r";
 }
 
 function initLatest(){
@@ -71,10 +71,10 @@ function initLatest(){
     $manufacturers = getManufacturers();
 
     if(!count($manufacturers)){
-        var_dump('ERROR. No manufacturers');
+        echo " ERROR. No manufacturers \n\r";
         return;
     }
-    var_dump('Find manufacturers:' . count($manufacturers));
+    echo "Find manufacturers:  " , count($manufacturers), " \n\r";
 
     $latestVendorName = getLastVendorNameFromXml();
     $latestVendorId = null;
@@ -84,7 +84,7 @@ function initLatest(){
 
         if(!$latestVendorId && $factory["name"] === $latestVendorName){
             $latestVendorId = $factory["id"];
-            var_dump('First manufacturer: ' . $factory["name"]);
+            echo "First manufacturer:  " , $factory["name"], " \n\r";
         }
 
         if(!$latestVendorId){
@@ -95,8 +95,9 @@ function initLatest(){
 
     }
 
-    var_dump( $BASE->currentCountFromCategory.' out of '.$BASE->allCountFromCategory.' models received.');
-    var_dump('The END;');
+    echo $BASE->currentCountFromCategory, " out of " , $BASE->allCountFromCategory, "models received. \n\r";
+    echo "The END; \n\r";
+
 }
 
 /*function initDebug(){
@@ -155,7 +156,7 @@ function loadFromFactory($factory){
     $itemJson = getItem( 1, $factory["id"], false );
 
     $count = getPagesCount($itemJson);
-    var_dump('Find pages models from factory:' . $count);
+    echo "Find pages models from factory: " , $count, " \n\r";
 
     if($count > 0 && $count < 51){
         getModelsCategory($factory["id"], false);
@@ -166,7 +167,10 @@ function loadFromFactory($factory){
 
 function getLastVendorNameFromXml(){
     global $BASE;
-    $xml = simplexml_load_file($BASE->fileNameXML);
+    $xml = simplexml_load_string( file_get_contents ($BASE->fileNameXML));
+    $offerCount = $xml->shop->offers->offer->count();
+    $BASE->currentCountFromCategory = $offerCount;
+    echo "Моделей в документе: ", $offerCount, "\n\r";
     return (string) $xml->xpath("//offer[last()]")[0]->vendor;
 }
 
@@ -181,7 +185,7 @@ function getCategoryAndInitFile(){
     getCategoryChildWrite($childCategory);
 
     getAllModelCount();
-    var_dump('All '.$BASE->allCountFromCategory.' models');
+    echo "All  " , $BASE->allCountFromCategory, "  models\n\r";
 }
 
 function getModelsCategoryFromPriceAndFactory($factory){
@@ -194,14 +198,12 @@ function getModelsCategoryFromPriceAndFactory($factory){
 
     for($k = $BASE->min_price; $k <= $BASE->max_price; $k += $BASE->step_price){
         getModelsCategory($factory, ($k.'~'.($k+$BASE->step_price)) );
-        var_dump($BASE->currentCountFromCategory.' out of '.$BASE->allCountFromCategory.' models received... loading...');
+        echo $BASE->currentCountFromCategory, "  out of " , $BASE->allCountFromCategory, " models received... loading...\n\r";
     }
 
     // цена больше макимальной
     getModelsCategory($factory, '~'.($BASE->min_price) );
-
-    var_dump( $BASE->currentCountFromCategory.' out of '.$BASE->allCountFromCategory.' models received.. loading...');
-
+    echo $BASE->currentCountFromCategory, "  out of " , $BASE->allCountFromCategory, " models received... loading...\n\r";
 }
 
 function getManufacturers(){
@@ -213,7 +215,7 @@ function getManufacturers(){
     $json = getJson($URL_FOR_ITEMS);
 
     if(!isset($json) || !isset($json["filters"])){
-        var_dump( 'No get Manufacturers. Reload.' );
+        echo "No get Manufacturers. Reload. \n\r" ;
         return getManufacturers();
     }
 
@@ -252,7 +254,7 @@ function getModelsCategory($factory, $price){
         } else {
             getItemPartCount10Write($i, $factory, $price);
         }
-        var_dump($BASE->currentCountFromCategory.' out of '.$BASE->allCountFromCategory.' models received... loading...');
+        echo $BASE->currentCountFromCategory,' out of ',$BASE->allCountFromCategory,' models received... loading...  \n\r';
     }
 }
 
@@ -287,7 +289,7 @@ function getItem($page, $factory, $price, $count=false, $limit=0){
         if($limit > 5){
                 return false;
         }
-        var_dump('No get models. Reload..');
+        echo "No get models. Reload..  \n\r";
 
         return getItem($page, $factory, $price, false, $limit);
     }
@@ -348,10 +350,10 @@ function writeItem($json){
 
 function findIdInDocument($id){
     global $BASE;
-    $xml = simplexml_load_file($BASE->fileNameXML);
+    $xml = simplexml_load_string( file_get_contents ($BASE->fileNameXML));
     $elements = $xml->xpath("//offer[@id='".$id."']");
     if(count($elements)){
-        var_dump('find duplicate: '. $id);
+        echo 'find duplicate: ', $id, " \n\r";
         return true;
     }
 
@@ -396,7 +398,8 @@ function getCategory(){
     $json = getJson($URL);
 
     if(!isset($json) || !isset($json["category"])){
-        var_dump('reload...');
+
+        echo "reload...  \n\r";
         return getCategory();
     }
 
@@ -456,10 +459,10 @@ function foo_create_xml($fileNameXML){
 
 function foo_add_category_xml($fileNameXML, $propName, $prop){
 
-   $xml_doc = simplexml_load_file($fileNameXML);
+   $xml_doc = simplexml_load_string( file_get_contents ($fileNameXML));
    $categories = $xml_doc->shop->categories;
 
-   $category = $categories->addChild('category', $propName);
+   $category = $categories->addChild('category', htmlspecialchars($propName));
 
    foreach($prop as $key=>$value) {
        $category->addAttribute($key, $value);
@@ -468,25 +471,25 @@ function foo_add_category_xml($fileNameXML, $propName, $prop){
 }
 
 function foo_add_items_xml($fileNameXML, $model, $properties){
-   $xml_doc = simplexml_load_file($fileNameXML);
+   $xml_doc = simplexml_load_string( file_get_contents ($fileNameXML));
    $categories = $xml_doc->shop->offers;
 
    $offer = $categories->addChild('offer');
    $offer->addAttribute('id', $model["id"]);
 
-   $offer->addChild('vendor', $model["vendor"]["name"]);
+   $offer->addChild('vendor', htmlspecialchars($model["vendor"]["name"]));
    $offer->addChild('categoryId', $model["category"]["id"]);
-   $offer->addChild('description', $model["description"]);
-   $offer->addChild('name', $model["name"]);
+   $offer->addChild('description', htmlspecialchars($model["description"]));
+   $offer->addChild('name', htmlspecialchars($model["name"]));
 
    foreach($model["photos"] as $value) {
-          $param = $offer->addChild('picture',  $value["url"]);
+          $offer->addChild('picture',  (string) $value["url"]);
    }
 
    if(isset($properties) && ((count((array) $properties)) > 0) ){
        foreach($properties as $key=>$value) {
-           $param = $offer->addChild('param',  $value);
-           $param->addAttribute('name', $key);
+           $param = $offer->addChild('param',  htmlspecialchars($value));
+           $param->addAttribute('name', htmlspecialchars($key));
        }
    }
 
@@ -502,14 +505,14 @@ function foo_add_items_xml($fileNameXML, $model, $properties){
 }
 
 function getJson($URL, $limit = 0){
-    var_dump($URL);
+
+    echo $URL, " \n\r";
     sleep(1);
     try {
         $json = file_get_contents($URL);
 
         if ($json === false) {
-            //var_dump('$json === false');
-             var_dump('Server error. Load 10sec and return');
+             echo "Server error. Load 10sec and return  \n\r";
 
             sleep(10);
             if($limit > 20){
@@ -518,7 +521,7 @@ function getJson($URL, $limit = 0){
             return getJson($URL, ++$limit);
         }
     } catch (Exception $e) {
-        var_dump('Server error. Load 30sec and return');
+        echo "Server error. Load 30sec and return  \n\r";
 
         sleep(30);
         return getJson($URL);
