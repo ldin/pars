@@ -12,7 +12,7 @@ $BASE->step_price = 10000;
 
 // Включить если надо докачать элементы,
 // Загрузка начинается с последнего закаченного производителя(вначале возможны дубли)
-$BASE->latest_upload = true;
+$BASE->latest_upload = false;
 $BASE->latest_upload_fileName = 'Noutbuki_91013.xml';
 
 // не менять
@@ -50,11 +50,16 @@ function init(){
     }
     echo 'Find manufacturers:' , count($manufacturers), " \n\r";
 
-    //  создать  xml
+    //  создать  xml и записать подкатегории
     getCategoryAndInitFile();
 
+    // получить количество моделей каждого производителя в файле
+    $countModelsFactoryInFile = categoriesCount();
+
     foreach($manufacturers as  $factory){
-        loadFromFactory($factory);
+        //DEBUG
+        //if($factory["name"] === 'Acer' || $factory["name"] === 'ASUS'){continue;}
+        loadFromFactory($factory, $countModelsFactoryInFile);
     }
 
     echo  $BASE->currentCountFromCategory, ' out of ', $BASE->allCountFromCategory, " models received. \n\r";
@@ -82,6 +87,9 @@ function initLatest(){
     $latestVendorName = getLastVendorNameFromXml();
     $latestVendorId = null;
 
+    // получить количество моделей каждого производителя в файле
+    $countModelsFactoryInFile = categoriesCount();
+
     foreach($manufacturers as  $factory){
         if(!$latestVendorId && $factory["name"] === $latestVendorName){
             $latestVendorId = $factory["id"];
@@ -90,19 +98,33 @@ function initLatest(){
         if(!$latestVendorId){
             continue;
         }
-        loadFromFactory($factory);
+        loadFromFactory($factory, $countModelsFactoryInFile);
     }
     echo $BASE->currentCountFromCategory, " out of " , $BASE->allCountFromCategory, "models received. \n\r";
     echo "The END; \n\r";
 }
 
-function loadFromFactory($factory){
+function loadFromFactory($factory, $countModelsFactoryInFile){
     global $BASE;
 
     $itemJson = getItem( 1, $factory["id"], false );
 
     $count = getPagesCount($itemJson);
-    echo "Find pages models from factory: " , $count, " \n\r";
+    $countModel = getModelsCount($itemJson);
+    echo "Find pages models from ", $factory["name"], ": " , $count, " models: ", $countModel, " \n\r";
+
+    if(!empty($countModelsFactoryInFile)){
+        echo "All model in file: ", $countModelsFactoryInFile[$factory["name"]], "\n\r";
+    }
+
+    if(
+        !empty($countModelsFactoryInFile) &&
+        !empty($countModelsFactoryInFile[$factory["name"]]) &&
+        $countModelsFactoryInFile[$factory["name"]] > (int)($countModel - $countModel * 0.005)
+    ){
+        echo "All factory", $factory["name"], " skip.";
+        return;
+    }
 
     if($count > 0 && $count <= ($BASE->maxPage * 2)){
         getModelsCategory($factory["id"], false);
@@ -205,6 +227,10 @@ function getModelsCategory($factory, $price){
 
 function getPagesCount($json){
     $page = $json["context"]["page"]["total"];
+    return $page;
+}
+function getModelsCount($json){
+    $page = $json["context"]["page"]["totalItems"];
     return $page;
 }
 
@@ -370,9 +396,7 @@ function getCategory(){
 
     $BASE->fileNameXML = textlat($category["fullName"]).'_'.$category["id"].'.xml';
 
-    if(!file_exists($BASE->fileNameXML) || filesize($BASE->fileNameXML) == 0){
-        foo_create_xml($BASE->fileNameXML);
-    }
+    createFile();
 
     $prop = new stdClass;
     $prop->id = $category["id"];
@@ -469,6 +493,42 @@ function foo_add_items_xml($fileNameXML, $model, $properties, $photos){
    return true;
 }
 
+function categoriesCount(){
+    global $BASE;
+    $xml = simplexml_load_string( file_get_contents ($BASE->fileNameXML));
+    $offers = $xml->shop->offers;
+
+    $offerLen=$offers->offer->count();
+
+    $factories = array();
+
+    $unique_items_o = array();
+    for ( $i = $offerLen-1; $i >= 0; $i-- )
+    {
+        $sx_item = $offers->offer[$i];
+        $hash_key = ((string)$sx_item->vendor);
+
+        if ( !in_array($hash_key, $unique_items_o) )
+        {
+            array_push($unique_items_o, $hash_key);
+            $factories[$hash_key] = 1;
+
+        }else{
+            $factories[$hash_key] += 1;
+        }
+
+    }
+
+    return $factories;
+}
+
+function createFile(){
+    global $BASE;
+    if(!file_exists($BASE->fileNameXML) || filesize($BASE->fileNameXML) == 0){
+        foo_create_xml($BASE->fileNameXML);
+    }
+}
+
 function getJson($URL, $limit = 0){
 
     echo $URL, " \n\r";
@@ -477,9 +537,9 @@ function getJson($URL, $limit = 0){
         $json = file_get_contents($URL);
 
         if ($json === false) {
-             echo "Server error. Load 10sec and return  \n\r";
+             echo "Server error. Load 7sec and return  \n\r";
 
-            sleep(10);
+            sleep(7);
             if($limit > 20){
                 return false;
             }
