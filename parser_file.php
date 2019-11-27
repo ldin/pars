@@ -253,7 +253,7 @@ function getItem($page, $factory, $price, $count=false, $limit=0){
             $URL_FOR_ITEMS .= '&-11='.$factory;
     }
     $URL_FOR_ITEMS .= '&fields='.$BASE->fields_for_model;
-    $URL_FOR_ITEMS .= '&sort=DATE';
+    $URL_FOR_ITEMS .= '&sort=PRICE';
     $URL_FOR_ITEMS .= '&how='.$how;
     $URL_FOR_ITEMS .= '&result_type=MODELS';
     $URL_FOR_ITEMS .= '&api_key='.$BASE->API;
