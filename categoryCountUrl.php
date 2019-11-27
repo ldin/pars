@@ -46,11 +46,6 @@ foreach ($factories as $value) {
 
 echo  " All: ", $len,"(",$controlCount,")", " vendor: ", count($unique_items_o), "\n\r";
 
-//if(!file_exists($filenameJson) || filesize($filenameJson) == 0){
-//    foo_create_xml($filenameJson);
-//}
-//file_put_contents($filenameJson, json_encode($factories));
-
 //var_dump($factories);
 function writeToJson($factories){
     global $BASE;
