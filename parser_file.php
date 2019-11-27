@@ -122,7 +122,7 @@ function loadFromFactory($factory, $countModelsFactoryInFile){
         !empty($countModelsFactoryInFile[$factory["name"]]) &&
         $countModelsFactoryInFile[$factory["name"]] > (int)($countModel - $countModel * 0.005)
     ){
-        echo "All factory", $factory["name"], " skip.";
+        echo "All factory", $factory["name"], " skip.\n\r";
         return;
     }
 
