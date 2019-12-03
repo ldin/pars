@@ -2,18 +2,13 @@
 $BASE = new stdClass();
 
 // id категории
-$BASE->categories_id = '91013';
+$BASE->categories_id = '90572';
 
 // Минимальная\максимальная цена и шаг выборки по цене.
 // Для цен меньше мин и больше макс отдельные запросы.
 $BASE->min_price = 0;
 $BASE->max_price = 100000;
 $BASE->step_price = 10000;
-
-// Включить если надо докачать элементы,
-// Загрузка начинается с последнего закаченного производителя(вначале возможны дубли)
-$BASE->latest_upload = false;
-$BASE->latest_upload_fileName = 'Noutbuki_91013.xml';
 
 // не менять
 $BASE->API = '0882dd91347958773d48ed01bce01396a66b9ce6d8';
@@ -23,19 +18,17 @@ $BASE->fields_for_model = 'MODEL_CATEGORY,MODEL_VENDOR';
 //MODEL_ACTIVE_FILTERS
 $BASE->count = 30;
 $BASE->page = 1;
-$BASE->maxPage = 2; // ограничение апи на кол-во страниц
+$BASE->maxPage = 50; // ограничение апи на кол-во страниц
 $BASE->maxCount = (int)($BASE->count * 50);
 
 $BASE->allCountFromCategory = 0;
 $BASE->currentCountFromCategory = 0;
-$BASE->fileNameXML = 'test2.xml';
+$BASE->fileNameXML = '';
 $BASE->current_categories_id = '';
 
-if($BASE->latest_upload){
-    initLatest();
-} else{
-    init();
-}
+
+init();
+
 
 function init(){
     global $BASE;
@@ -60,48 +53,11 @@ function init(){
         //DEBUG
         //if($factory["name"] === 'Acer' || $factory["name"] === 'ASUS'){continue;}
         loadFromFactory($factory, $countModelsFactoryInFile);
+        echo $BASE->currentCountFromCategory, "  out of " , $BASE->allCountFromCategory, " models received... loading...\n\r";
     }
 
     echo  $BASE->currentCountFromCategory, ' out of ', $BASE->allCountFromCategory, " models received. \n\r";
     echo "The END;  \n\r";
-}
-
-function initLatest(){
-    global $BASE;
-
-    $BASE->current_categories_id = $BASE->categories_id;
-    $BASE->fileNameXML = $BASE->latest_upload_fileName;
-
-    //DEBUG
-    //foo_create_xml($BASE->fileNameXML);
-
-    // получить всех производителей в категории
-    $manufacturers = getManufacturers();
-
-    if(!count($manufacturers)){
-        echo " ERROR. No manufacturers \n\r";
-        return;
-    }
-    echo "Find manufacturers:  " , count($manufacturers), " \n\r";
-
-    $latestVendorName = getLastVendorNameFromXml();
-    $latestVendorId = null;
-
-    // получить количество моделей каждого производителя в файле
-    $countModelsFactoryInFile = categoriesCount();
-
-    foreach($manufacturers as  $factory){
-        if(!$latestVendorId && $factory["name"] === $latestVendorName){
-            $latestVendorId = $factory["id"];
-            echo "First manufacturer:  " , $factory["name"], " \n\r";
-        }
-        if(!$latestVendorId){
-            continue;
-        }
-        loadFromFactory($factory, $countModelsFactoryInFile);
-    }
-    echo $BASE->currentCountFromCategory, " out of " , $BASE->allCountFromCategory, "models received. \n\r";
-    echo "The END; \n\r";
 }
 
 function loadFromFactory($factory, $countModelsFactoryInFile){
@@ -109,14 +65,13 @@ function loadFromFactory($factory, $countModelsFactoryInFile){
 
     $itemJson = getItem( 1, $factory["id"], false );
 
-    $count = getPagesCount($itemJson);
+    $count = (int)getPagesCount($itemJson);
     $countModel = getModelsCount($itemJson);
     echo "Find pages models from ", $factory["name"], ": " , $count, " models: ", $countModel, " \n\r";
 
     if(!empty($countModelsFactoryInFile)){
         echo "All model in file: ", $countModelsFactoryInFile[$factory["name"]], "\n\r";
     }
-
     if(
         !empty($countModelsFactoryInFile) &&
         !empty($countModelsFactoryInFile[$factory["name"]]) &&
@@ -126,9 +81,11 @@ function loadFromFactory($factory, $countModelsFactoryInFile){
         return;
     }
 
-    if($count > 0 && $count <= ($BASE->maxPage * 2)){
+    $maxPage = (int)$BASE->maxPage * 2;
+
+    if($count > 0 && $count <= $maxPage){
         getModelsCategory($factory["id"], false);
-    } else if($count > $BASE->maxPage){
+    } else if($count > $maxPage){
         getModelsCategoryFromPriceAndFactory($factory["id"]);
     }
 }
@@ -418,30 +375,47 @@ function getCategoryChild(){
     return $json;
 }
 
+function findCategoryInDocument($id){
+    global $BASE;
+    $xml = simplexml_load_string( file_get_contents ($BASE->fileNameXML));
+    $elements = $xml->xpath("//category[@id='".$id."']");
+    if(count($elements)){
+        echo 'find duplicate Category Child: ', $id, " \n\r";
+        return true;
+    }
+
+    return false;
+}
+
 function getCategoryChildWrite($json){
     global $BASE;
 
     $items = $json["categories"];
 
     foreach ($items as  $value) {
+        if(!findCategoryInDocument($value["id"])){
             $prop = new stdClass;
             $prop->id = $value["id"];
             $prop->parentId = $BASE->current_categories_id;
             foo_add_category_xml($BASE->fileNameXML, $value["fullName"], $prop);
+        }
     }
     return;
 }
 
 function foo_create_xml($fileNameXML){
-
     $newsXML = new SimpleXMLElement('<?xml version="1.0" encoding="utf-8"?><yml_catalog date="'.date("m.d.y").'"></yml_catalog>');
-
     $shop = $newsXML->addChild('shop');
-
     $shop->addChild('categories');
     $shop->addChild('offers');
 
-    $newsXML->asXML($fileNameXML);
+    $domxml = new \DOMDocument('1.0');
+    $domxml->preserveWhiteSpace = false;
+    $domxml->formatOutput = true;
+    $domxml->loadXML($newsXML->asXML());
+    $domxml->save($fileNameXML);
+
+
 }
 
 function foo_add_category_xml($fileNameXML, $propName, $prop){
@@ -449,7 +423,7 @@ function foo_add_category_xml($fileNameXML, $propName, $prop){
    $xml_doc = simplexml_load_string( file_get_contents ($fileNameXML));
    $categories = $xml_doc->shop->categories;
 
-   $category = $categories->addChild('category', htmlspecialchars($propName));
+   $category = $categories->addChild('category', validateValueForWrite($propName));
 
    foreach($prop as $key=>$value) {
        $category->addAttribute($key, $value);
@@ -464,10 +438,10 @@ function foo_add_items_xml($fileNameXML, $model, $properties, $photos){
    $offer = $categories->addChild('offer');
    $offer->addAttribute('id', $model["id"]);
 
-   $offer->addChild('vendor', htmlspecialchars($model["vendor"]["name"]));
+   $offer->addChild('vendor', validateValueForWrite($model["vendor"]["name"]));
    $offer->addChild('categoryId', $model["category"]["id"]);
-   $offer->addChild('description', htmlspecialchars($model["description"]));
-   $offer->addChild('name', htmlspecialchars($model["name"]));
+   $offer->addChild('description', validateValueForWrite($model["description"]));
+   $offer->addChild('name', validateValueForWrite($model["name"]));
 
     if(isset($photos) && ((count((array) $photos)) > 0) ){
         foreach($photos as $photo) {
@@ -477,8 +451,8 @@ function foo_add_items_xml($fileNameXML, $model, $properties, $photos){
 
    if(isset($properties) && ((count((array) $properties)) > 0) ){
        foreach($properties as $key=>$value) {
-           $param = $offer->addChild('param',  htmlspecialchars($value));
-           $param->addAttribute('name', htmlspecialchars($key));
+           $param = $offer->addChild('param',  validateValueForWrite($value));
+           $param->addAttribute('name', validateValueForWrite($key));
        }
    }
 
@@ -499,6 +473,7 @@ function categoriesCount(){
     $offers = $xml->shop->offers;
 
     $offerLen=$offers->offer->count();
+    $BASE->currentCountFromCategory = $offerLen;
 
     $factories = array();
 
@@ -520,6 +495,14 @@ function categoriesCount(){
     }
 
     return $factories;
+}
+
+function validateValueForWrite($value){
+    $value = htmlspecialchars($value,ENT_COMPAT,'UTF-8');
+    $value = str_replace(PHP_EOL,"&#10;",$value);
+    $value = str_replace(chr(13),"&#13;",$value);
+    $value = str_replace("\t","&#9;",$value);
+    return $value;
 }
 
 function createFile(){
