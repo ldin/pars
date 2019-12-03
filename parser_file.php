@@ -252,7 +252,7 @@ function writeItem($json){
     global $BASE;
     $items = $json["items"];
 
-    if(isset($items) && count($items) > 1){
+    if(isset($items) && count($items) > 0){
         foreach ($items as  $value) {
             if(!findIdInDocument($value["id"])){
 
